@@ -3,4 +3,6 @@
 /.idea
 
 /gemma-2b-it/*
+/gte-large/*
 
+*.npy
