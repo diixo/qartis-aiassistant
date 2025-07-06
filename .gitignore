@@ -1,0 +1,6 @@
+*.pyc
+*__pycache__/
+/.idea
+
+/gemma-2b-it/*
+
