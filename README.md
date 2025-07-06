@@ -7,7 +7,7 @@
 
 * Local assistant model directory: `gemma-2b-it` from: https://huggingface.co/google/gemma-2b-it
 
-* Local embeddiing model: `gte-large` from https://huggingface.co/thenlper/gte-large
+* Local embeddings model: `gte-large` from https://huggingface.co/thenlper/gte-large
 
 
 ## Acknowledgments
