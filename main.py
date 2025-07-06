@@ -1,3 +1,4 @@
+
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -5,18 +6,17 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import warnings
 warnings.filterwarnings("ignore")
 
-import re
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-#import scann        #pip install scann
+#import scann
 
 import torch
 
 import transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from sentence_transformers import SentenceTransformer
-import bitsandbytes as bnb # pip install -q -i https://pypi.org/simple/ bitsandbytes
+#import bitsandbytes as bnb # pip install -q -i https://pypi.org/simple/ bitsandbytes
 import utils
 
 
@@ -116,18 +116,18 @@ class GemmaHF():
         compute_dtype = getattr(torch, "float16")
 
         # Define the configuration for quantization
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=compute_dtype,
-        )
+        # bnb_config = BitsAndBytesConfig(
+        #     load_in_4bit=True,
+        #     bnb_4bit_use_double_quant=True,
+        #     bnb_4bit_quant_type="nf4",
+        #     bnb_4bit_compute_dtype=compute_dtype,
+        # )
 
         # Load the pre-trained model with quantization configuration
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             device_map=device,
-            quantization_config=bnb_config,
+            torch_dtype=torch.bfloat16
         )
 
         # Load the tokenizer with specified device and max_seq_length
@@ -229,6 +229,7 @@ class AIAssistant():
     def __init__(self, gemma_model, embeddings_name, temperature=0.4, role="expert"):
         """Initialize the AI assistant."""
         # Initialize attributes
+        self.searcher = None
         self.embeddings_name = embeddings_name
         self.knowledge_base = []
         self.temperature = temperature
@@ -249,24 +250,31 @@ class AIAssistant():
         # Storing the knowledge base
         self.store_knowledge_base(knowledge_base)
         
-        # Load and index the knowledge base
-        print("Indexing and mapping the knowledge base:")
-        embeddings = map2embeddings(self.knowledge_base, self.embedding_model)
-        self.embeddings = np.array(embeddings).astype(np.float32)
-        
-        # Instantiate the searcher for similarity search
-        self.index_embeddings()
+        if knowledge_base is not None:
+            # Load and index the knowledge base
+            print("Indexing and mapping the knowledge base:")
+            embeddings = map2embeddings(self.knowledge_base, self.embedding_model)
+            self.embeddings = np.array(embeddings).astype(np.float32)
+
+            # Instantiate the searcher for similarity search
+            self.index_embeddings()
+        else:
+            self.embeddings = None
         
     def index_embeddings(self):
-        """Index the embeddings using ScaNN """
-        self.searcher = (scann.scann_ops_pybind.builder(db=self.embeddings, num_neighbors=10, distance_measure="dot_product")
-                 .tree(num_leaves=min(self.embeddings.shape[0] // 2, 1000), 
-                       num_leaves_to_search=100, 
-                       training_sample_size=self.embeddings.shape[0])
-                 .score_ah(2, anisotropic_quantization_threshold=0.2)
-                 .reorder(100)
-                 .build()
-           )
+
+        if self.embeddings is not None:
+            """Index the embeddings using ScaNN """
+            self.searcher = (scann.scann_ops_pybind.builder(db=self.embeddings, num_neighbors=10, distance_measure="dot_product")
+                    .tree(num_leaves=min(self.embeddings.shape[0] // 2, 1000), 
+                        num_leaves_to_search=100, 
+                        training_sample_size=self.embeddings.shape[0])
+                    .score_ah(2, anisotropic_quantization_threshold=0.2)
+                    .reorder(100)
+                    .build()
+            )
+        else:
+            self.searcher = None
         
     def query(self, query):
         """Query the knowledge base of the AI assistant."""
@@ -303,19 +311,20 @@ class AIAssistant():
 if __name__ == '__main__':
 
     categories = ["Machine_learning", "Data_science", "Statistics", "Deep_learning", "Artificial_intelligence"]
-    extracted_texts = utils.get_wikipedia_pages(categories)
-    print("Found", len(extracted_texts), "Wikipedia pages")
+    #extracted_texts = utils.get_wikipedia_pages(categories)
+    extracted_texts = None
 
-
-    wikipedia_data_science_kb = pd.DataFrame(extracted_texts, columns=["wikipedia_text"])
-    wikipedia_data_science_kb.to_csv("wikipedia_data_science_kb.csv", index=False)
-    wikipedia_data_science_kb.head()
+    if extracted_texts is not None:
+        print("Found", len(extracted_texts), "Wikipedia pages")
+        wikipedia_data_science_kb = pd.DataFrame(extracted_texts, columns=["wikipedia_text"])
+        wikipedia_data_science_kb.to_csv("wikipedia_data_science_kb.csv", index=False)
+        wikipedia_data_science_kb.head()
 
     #################
 
     # Initialize the name of the embeddings and model
-    embeddings_name = "/gte-large"
-    model_name = "/gemma-2b-it"
+    embeddings_name = "./gte-large"
+    model_name = "./gemma-2b-it"
 
     # Create an instance of AIAssistant with specified parameters
     gemma_ai_assistant = AIAssistant(gemma_model=GemmaHF(model_name), embeddings_name=embeddings_name)
