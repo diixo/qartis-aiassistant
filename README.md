@@ -1,6 +1,9 @@
 
 # ai-assistant with gemma-2b-it
 
+**QARTIS** - `Question Answering Retrieval Transformer Intelligent System`
+
+
 <div align="left" width="855" height="305">
   <img src="/assets/High-Level_RAG_Architecture_rev2.jpg">
 </div>
