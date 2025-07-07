@@ -5,7 +5,7 @@ import numpy as np
 from pathlib import Path
 
 
-class SmartSearch:
+class SmartSearch_FAISS:
 
     def __init__(self, modelname="all-MiniLM-L6-v2") -> None:
         self.model = SentenceTransformer(modelname)
@@ -38,7 +38,7 @@ class SmartSearch:
         return False
 
 
-    def write_index(self, filepath: str):
+    def save_index(self, filepath: str):
         if self.index:
             faiss.write_index(self.index, filepath)
 
