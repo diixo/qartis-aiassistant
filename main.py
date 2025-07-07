@@ -20,32 +20,8 @@ from transformers import BitsAndBytesConfig
 #import bitsandbytes as bnb
 
 import utils
-from smart_search import SmartSearch
+from smart_search import SmartSearch_FAISS
 
-
-def define_device():
-    """Define the device to be used by PyTorch"""
-
-    # Get the PyTorch version
-    torch_version = torch.__version__
-
-    # Print the PyTorch version
-    print(f"PyTorch version: {torch_version}", end=" -- ")
-
-    # Check if MPS (Multi-Process Service) device is available on MacOS
-    if torch.backends.mps.is_available():
-        # If MPS is available, print a message indicating its usage
-        print("using MPS device on MacOS")
-        # Define the device as MPS
-        defined_device = torch.device("mps")
-    else:
-        # If MPS is not available, determine the device based on GPU availability
-        defined_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        # Print a message indicating the selected device
-        print(f"using {defined_device}")
-
-    # Return the defined device
-    return defined_device
 
 
 def get_embedding(text, embedding_model):
@@ -55,7 +31,7 @@ def get_embedding(text, embedding_model):
     embedding = embedding_model.encode(text, show_progress_bar=False)
     
     # Convert the embeddings to a list of floats and return
-    return embedding.tolist()
+    return embedding.tolist() # (embedding_sz=1024, )
 
 
 def map2embeddings(data, embedding_model):
@@ -65,9 +41,9 @@ def map2embeddings(data, embedding_model):
     embeddings = []
 
     # Iterate over each text in the input data list
-    no_texts = len(data)
-    print(f"Mapping {no_texts} pieces of information")
-    for i in tqdm(range(no_texts)):
+    num_texts = len(data)
+    print(f"Mapping {num_texts} pieces of information")
+    for i in tqdm(range(num_texts)):
         # Get embeddings for the current text using the provided embedding model
         embeddings.append(get_embedding(data[i], embedding_model))
     
@@ -109,14 +85,14 @@ class GemmaHF():
         
         # Initialize the model and tokenizer
         print("\nInitializing model:")
-        self.device = define_device()
+        self.device = utils.define_device()
         self.model, self.tokenizer = self.initialize_model(self.model_name, self.device, self.max_seq_length)
         
     def initialize_model(self, model_name, device, max_seq_length):
         """Initialize a 4-bit quantized causal language model (LLM) and tokenizer with specified settings"""
 
         # Define the data type for computation
-        compute_dtype = getattr(torch, "float16")
+        #compute_dtype = getattr(torch, "float16")
 
         # Define the configuration for quantization
         # bnb_config = BitsAndBytesConfig(
@@ -130,7 +106,7 @@ class GemmaHF():
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             device_map=device,
-            torch_dtype=torch.bfloat16
+            torch_dtype=torch.bfloat16,
         )
 
         # Load the tokenizer with specified device and max_seq_length
@@ -172,10 +148,10 @@ def generate_summary_and_answer(question, data, searcher, embedding_model, model
     """Generate an answer for a given question using context from a dataset"""
     
     # Embed the input question using the provided embedding model
-    embeded_question = np.array(get_embedding(question, embedding_model)).reshape(1, -1)
+    #embeded_question = np.array(get_embedding(question, embedding_model)).reshape(1, -1)
     
     # Find similar contexts in the dataset based on the embedded question
-    neighbors, distances = searcher.search_batched(embeded_question)
+    neighbors, distances = searcher.search_batched(question)
     
     # Extract context from the dataset based on the indices of similar contexts
     context = " ".join([data[pos] for pos in np.ravel(neighbors)])
@@ -232,7 +208,7 @@ class AIAssistant():
     def __init__(self, gemma_model, embeddings_name, temperature=0.4, role="expert"):
         """Initialize the AI assistant."""
         # Initialize attributes
-        self.searcher = None
+        self.searcher = SmartSearch_FAISS(embeddings_name)
         self.embeddings_name = embeddings_name
         self.knowledge_base = []
         self.temperature = temperature
@@ -252,31 +228,30 @@ class AIAssistant():
         """Store and index the knowledge based to be used by the assistant"""
         # Storing the knowledge base
         self.store_knowledge_base(knowledge_base)
+        result = False
         
         if knowledge_base is not None:
             # Load and index the knowledge base
             print("Indexing and mapping the knowledge base:")
-            embeddings = map2embeddings(self.knowledge_base, self.embedding_model)
-            self.embeddings = np.array(embeddings).astype(np.float32)
+            #embeddings = map2embeddings(self.knowledge_base, self.searcher.model)
+            #embeddings, dim = self.searcher.texts_to_vector(self.knowledge_base)
+            #self.embeddings = np.array(embeddings).astype(np.float32)
 
             # Instantiate the searcher for similarity search
-            self.index_embeddings()
-        else:
-            self.embeddings = None
-        
+            result = self.searcher.add_texts_to_index(knowledge_base, utils.define_device())
+        return result
+
     def index_embeddings(self):
-        if self.embeddings is not None:
-            """Index the embeddings using ScaNN """
-            self.searcher = (scann.scann_ops_pybind.builder(db=self.embeddings, num_neighbors=10, distance_measure="dot_product")
-                    .tree(num_leaves=min(self.embeddings.shape[0] // 2, 1000), 
-                        num_leaves_to_search=100, 
-                        training_sample_size=self.embeddings.shape[0])
-                    .score_ah(2, anisotropic_quantization_threshold=0.2)
-                    .reorder(100)
-                    .build()
-            )
-        else:
-            self.searcher = None
+        """Index the embeddings using ScaNN """
+        # self.searcher = (scann.scann_ops_pybind.builder(db=self.embeddings, num_neighbors=10, distance_measure="dot_product")
+        #         .tree(num_leaves=min(self.embeddings.shape[0] // 2, 1000), 
+        #             num_leaves_to_search=100,
+        #             training_sample_size=self.embeddings.shape[0])
+        #         .score_ah(2, anisotropic_quantization_threshold=0.2)
+        #         .reorder(100)
+        #         .build()
+        # )
+
         
     def query(self, query):
         """Query the knowledge base of the AI assistant."""
@@ -300,14 +275,28 @@ class AIAssistant():
         
     def save_embeddings(self, filename="embeddings.npy"):
         """Save the embeddings to disk"""
-        np.save(filename, self.embeddings)
+        #np.save(filename, self.embeddings)
+        self.searcher.save_index()
         
     def load_embeddings(self, filename="embeddings.npy"):
         """Load the embeddings from disk and index them"""
-        self.embeddings = np.load(filename)
+        #self.embeddings = np.load(filename)
         # Re-instantiate the searcher
-        self.index_embeddings()
+        #self.index_embeddings()
+        return self.searcher.open_file()
 
+
+def filtering(texts_data: list):
+    filtered = []
+    filter = [
+        "machine learning", "data science", "deep learning", "artificial intelligence", "linear regression", "decission tree",
+        "cross-validation", "matrix regularization",]
+    for sent in texts_data:
+        for f in filter:
+            if str(sent).lower().find(f.lower()) >= 0:
+                filtered.append(sent)
+                break
+    return filtered
 
 
 if __name__ == '__main__':
@@ -330,7 +319,11 @@ if __name__ == '__main__':
             wikipedia_data_science_kb.to_csv(csv_file, index=False)
             wikipedia_data_science_kb.head()
 
-    print(f"wikipedia_text.sz={len(extracted_texts)}")
+    filtered = filtering(extracted_texts)
+    print(f"wikipedia_text.sz={len(extracted_texts)}, filtered.sz={len(filtered)}")
+
+    # restore original by filtered texts_data
+    extracted_texts = filtered
     #######################################################################################################################
 
     # Initialize the name of the embeddings and model
@@ -340,11 +333,16 @@ if __name__ == '__main__':
     # Create an instance of AIAssistant with specified parameters
     gemma_ai_assistant = AIAssistant(gemma_model=GemmaHF(model_name), embeddings_name=embeddings_name)
 
-    # Map the intended knowledge base to embeddings and index it
-    gemma_ai_assistant.learn_knowledge_base(knowledge_base=extracted_texts)
+    if gemma_ai_assistant.load_embeddings():
+        print("AIAssistant::loaded_embeddings OK.")
+        gemma_ai_assistant.store_knowledge_base(knowledge_base=extracted_texts)
+    else:
+        # Map the intended knowledge base to embeddings and index it
+        gemma_ai_assistant.learn_knowledge_base(knowledge_base=extracted_texts)
 
-    # Save the embeddings to disk (for later use)
-    gemma_ai_assistant.save_embeddings()
+        # Save the embeddings to disk (for later use)
+        gemma_ai_assistant.save_embeddings()
+
 
     # Set the temperature (creativity) of the AI assistant and set the role
     gemma_ai_assistant.set_temperature(0.0)
@@ -354,6 +352,8 @@ if __name__ == '__main__':
     #######################################################################################################################
     # Run and test
     gemma_ai_assistant.query("What is the difference between data science, machine learning, and artificial intelligence?")
+
+    exit(0)
 
     gemma_ai_assistant.query("Explain how linear regression works")
 

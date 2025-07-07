@@ -20,14 +20,14 @@ class SmartSearch_FAISS:
         return False
 
 
-    def texts_to_vector(self, texts):
+    def texts_to_vector(self, texts, device: str = None):
         if self.model: 
-            embeddings = self.model.encode(texts)
+            embeddings = self.model.encode(texts, show_progress_bar=True, device=device)
             return embeddings, embeddings.shape[1]
         return None, 0
 
 
-    def add_texts_to_index(self, texts: list) -> bool:
+    def add_texts_to_index(self, texts: list, device: str = None) -> bool:
         vector, dimension = self.texts_to_vector(texts)
         if not self.index and dimension > 0:
             self.index = faiss.IndexFlatL2(dimension)
@@ -47,7 +47,7 @@ class SmartSearch_FAISS:
         return self.add_texts_to_index([ text ])
 
 
-    def search(self, query_text: str, k: int = 20):
+    def search_batched(self, query_text: str, k: int = 20):
         if self.model:
             query_embedding = self.model.encode([query_text])
 

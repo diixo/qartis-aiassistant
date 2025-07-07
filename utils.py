@@ -1,7 +1,33 @@
-
+import torch
 import re
 import wikipediaapi #pip install wikipedia-api
 from tqdm import tqdm
+
+
+def define_device():
+    """Define the device to be used by PyTorch"""
+
+    # Get the PyTorch version
+    torch_version = torch.__version__
+
+    # Print the PyTorch version
+    print(f"PyTorch version: {torch_version}", end=" -- ")
+
+    # Check if MPS (Multi-Process Service) device is available on MacOS
+    if torch.backends.mps.is_available():
+        # If MPS is available, print a message indicating its usage
+        print("using MPS device on MacOS")
+        # Define the device as MPS
+        defined_device = torch.device("mps")
+    else:
+        # If MPS is not available, determine the device based on GPU availability
+        defined_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        # Print a message indicating the selected device
+        print(f"using {defined_device}")
+
+    # Return the defined device
+    return defined_device
 
 
 # Pre-compile the regular expression pattern for better performance
