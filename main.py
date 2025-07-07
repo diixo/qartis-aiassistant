@@ -6,6 +6,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import warnings
 warnings.filterwarnings("ignore")
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -262,7 +263,6 @@ class AIAssistant():
             self.embeddings = None
         
     def index_embeddings(self):
-
         if self.embeddings is not None:
             """Index the embeddings using ScaNN """
             self.searcher = (scann.scann_ops_pybind.builder(db=self.embeddings, num_neighbors=10, distance_measure="dot_product")
@@ -310,17 +310,26 @@ class AIAssistant():
 
 if __name__ == '__main__':
 
-    categories = ["Machine_learning", "Data_science", "Statistics", "Deep_learning", "Artificial_intelligence"]
-    #extracted_texts = utils.get_wikipedia_pages(categories)
-    extracted_texts = None
+    extracted_texts = []
 
-    if extracted_texts is not None:
-        print("Found", len(extracted_texts), "Wikipedia pages")
-        wikipedia_data_science_kb = pd.DataFrame(extracted_texts, columns=["wikipedia_text"])
-        wikipedia_data_science_kb.to_csv("wikipedia_data_science_kb.csv", index=False)
-        wikipedia_data_science_kb.head()
+    csv_file = "wikipedia_data_science_kb.csv"
 
-    #################
+    if Path(csv_file).exists():
+        df = pd.read_csv(csv_file)
+        wikipedia_text = df['wikipedia_text']
+
+        extracted_texts = wikipedia_text.tolist()
+    else:
+        categories = ["Machine_learning", "Data_science", "Statistics", "Deep_learning", "Artificial_intelligence"]
+        extracted_texts = utils.get_wikipedia_pages(categories)
+
+        if extracted_texts is not None:
+            wikipedia_data_science_kb = pd.DataFrame(extracted_texts, columns=["wikipedia_text"])
+            wikipedia_data_science_kb.to_csv(csv_file, index=False)
+            wikipedia_data_science_kb.head()
+
+    print(f"wikipedia_text.sz={len(extracted_texts)}")
+    #######################################################################################################################
 
     # Initialize the name of the embeddings and model
     embeddings_name = "./gte-large"
