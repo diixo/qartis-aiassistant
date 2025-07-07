@@ -233,24 +233,10 @@ class AIAssistant():
         if knowledge_base is not None:
             # Load and index the knowledge base
             print("Indexing and mapping the knowledge base:")
-            #embeddings = map2embeddings(self.knowledge_base, self.searcher.model)
-            #embeddings, dim = self.searcher.texts_to_vector(self.knowledge_base)
-            #self.embeddings = np.array(embeddings).astype(np.float32)
 
             # Instantiate the searcher for similarity search
             result = self.searcher.add_texts_to_index(knowledge_base, utils.define_device())
         return result
-
-    def index_embeddings(self):
-        """Index the embeddings using ScaNN """
-        # self.searcher = (scann.scann_ops_pybind.builder(db=self.embeddings, num_neighbors=10, distance_measure="dot_product")
-        #         .tree(num_leaves=min(self.embeddings.shape[0] // 2, 1000), 
-        #             num_leaves_to_search=100,
-        #             training_sample_size=self.embeddings.shape[0])
-        #         .score_ah(2, anisotropic_quantization_threshold=0.2)
-        #         .reorder(100)
-        #         .build()
-        # )
 
         
     def query(self, query):
@@ -273,17 +259,13 @@ class AIAssistant():
         """Define the answering style of the AI assistant."""
         self.role = role
         
-    def save_embeddings(self, filename="embeddings.npy"):
+    def save_embeddings(self, filename="embeddings.bin"):
         """Save the embeddings to disk"""
-        #np.save(filename, self.embeddings)
-        self.searcher.save_index()
+        self.searcher.save_index(filename)
         
-    def load_embeddings(self, filename="embeddings.npy"):
+    def load_embeddings(self, filename="embeddings.bin"):
         """Load the embeddings from disk and index them"""
-        #self.embeddings = np.load(filename)
-        # Re-instantiate the searcher
-        #self.index_embeddings()
-        return self.searcher.open_file()
+        return self.searcher.open_file(filename)
 
 
 def filtering(texts_data: list):
@@ -335,10 +317,10 @@ if __name__ == '__main__':
 
     if gemma_ai_assistant.load_embeddings():
         print("AIAssistant::loaded_embeddings OK.")
-        gemma_ai_assistant.store_knowledge_base(knowledge_base=extracted_texts)
+        gemma_ai_assistant.store_knowledge_base(extracted_texts)
     else:
         # Map the intended knowledge base to embeddings and index it
-        gemma_ai_assistant.learn_knowledge_base(knowledge_base=extracted_texts)
+        gemma_ai_assistant.learn_knowledge_base(extracted_texts)
 
         # Save the embeddings to disk (for later use)
         gemma_ai_assistant.save_embeddings()

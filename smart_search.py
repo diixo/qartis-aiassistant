@@ -12,7 +12,7 @@ class SmartSearch_FAISS:
         self.index = None
 
 
-    def open_file(self, filepath="embeddings.bin"):
+    def open_file(self, filepath: str):
         path = Path(filepath)
         if path.exists():
             self.index = faiss.read_index(filepath)
@@ -38,7 +38,7 @@ class SmartSearch_FAISS:
         return False
 
 
-    def save_index(self, filepath="embeddings.bin"):
+    def save_index(self, filepath: str):
         if self.index:
             faiss.write_index(self.index, filepath)
 
