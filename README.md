@@ -16,6 +16,11 @@
 Original source: https://github.com/diixo/qartis-aiassistant
 
 
+```bash
+pip install -U transformers==4.45.0
+```
+
+
 ## Run and tests:
 
 **Question >>>**
