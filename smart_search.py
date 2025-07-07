@@ -7,8 +7,8 @@ from pathlib import Path
 
 class SmartSearch:
 
-    def __init__(self) -> None:
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+    def __init__(self, modelname="all-MiniLM-L6-v2") -> None:
+        self.model = SentenceTransformer(modelname)
         self.index = None
 
 

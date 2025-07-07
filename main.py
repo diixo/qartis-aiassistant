@@ -11,14 +11,16 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 #import scann
-
 import torch
 
-import transformers
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from sentence_transformers import SentenceTransformer
-#import bitsandbytes as bnb # pip install -q -i https://pypi.org/simple/ bitsandbytes
+
+from transformers import BitsAndBytesConfig
+#import bitsandbytes as bnb
+
 import utils
+from smart_search import SmartSearch
 
 
 def define_device():
