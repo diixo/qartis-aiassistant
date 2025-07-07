@@ -23,34 +23,6 @@ import utils
 from smart_search import SmartSearch_FAISS
 
 
-
-def get_embedding(text, embedding_model):
-    """Get embeddings for a given text using the provided embedding model"""
-    
-    # Encode the text to obtain embeddings using the provided embedding model
-    embedding = embedding_model.encode(text, show_progress_bar=False)
-    
-    # Convert the embeddings to a list of floats and return
-    return embedding.tolist() # (embedding_sz=1024, )
-
-
-def map2embeddings(data, embedding_model):
-    """Map a list of texts to their embeddings using the provided embedding model"""
-    
-    # Initialize an empty list to store embeddings
-    embeddings = []
-
-    # Iterate over each text in the input data list
-    num_texts = len(data)
-    print(f"Mapping {num_texts} pieces of information")
-    for i in tqdm(range(num_texts)):
-        # Get embeddings for the current text using the provided embedding model
-        embeddings.append(get_embedding(data[i], embedding_model))
-    
-    # Return the list of embeddings
-    return embeddings
-
-
 def clean_text(txt, EOS_TOKEN):
     """Clean text by removing specific tokens and redundant spaces"""
     txt = (txt
@@ -90,18 +62,6 @@ class GemmaHF():
         
     def initialize_model(self, model_name, device, max_seq_length):
         """Initialize a 4-bit quantized causal language model (LLM) and tokenizer with specified settings"""
-
-        # Define the data type for computation
-        #compute_dtype = getattr(torch, "float16")
-
-        # Define the configuration for quantization
-        # bnb_config = BitsAndBytesConfig(
-        #     load_in_4bit=True,
-        #     bnb_4bit_use_double_quant=True,
-        #     bnb_4bit_quant_type="nf4",
-        #     bnb_4bit_compute_dtype=compute_dtype,
-        # )
-
         # Load the pre-trained model with quantization configuration
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
@@ -146,9 +106,6 @@ class GemmaHF():
 def generate_summary_and_answer(question, data, searcher, embedding_model, model,
                                 max_new_tokens=2048, temperature=0.4, role="expert"):
     """Generate an answer for a given question using context from a dataset"""
-    
-    # Embed the input question using the provided embedding model
-    #embeded_question = np.array(get_embedding(question, embedding_model)).reshape(1, -1)
     
     # Find similar contexts in the dataset based on the embedded question
     neighbors, distances = searcher.search_batched(question)
