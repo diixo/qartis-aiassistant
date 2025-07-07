@@ -16,8 +16,12 @@
 Original source: https://github.com/diixo/qartis-aiassistant
 
 
+## Run and tests:
+
+**Question >>>**
 `What is the difference between data science, machine learning, and artificial intelligence?`
 
+**Answer <<<**
 ```
 Sure, here's the difference between data science, machine learning, and artificial intelligence:
 
