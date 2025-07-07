@@ -48,58 +48,50 @@ def add_indefinite_article(role_name):
     return role_name
 
 
-class GemmaHF():
-    """Wrapper for the Transformers implementation of Gemma"""
-    
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+
+class LlamaHF:
+    """Wrapper for the Transformers implementation of LLaMA"""
+
     def __init__(self, model_name, max_seq_length=2048):
         self.model_name = model_name
         self.max_seq_length = max_seq_length
-        
-        # Initialize the model and tokenizer
-        print("\nInitializing model:")
-        self.device = utils.define_device()
-        self.model, self.tokenizer = self.initialize_model(self.model_name, self.device, self.max_seq_length)
-        
-    def initialize_model(self, model_name, device, max_seq_length):
-        """Initialize a 4-bit quantized causal language model (LLM) and tokenizer with specified settings"""
-        # Load the pre-trained model with quantization configuration
+
+        print("\nInitializing LLaMA model:")
+        self.device = self.define_device()
+        self.model, self.tokenizer = self.initialize_model(self.model_name, self.device)
+
+    def define_device(self):
+        """Simple device detection"""
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    def initialize_model(self, model_name, device):
+        """Initialize LLaMA model and tokenizer"""
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            device_map=device,
-            torch_dtype=torch.bfloat16,
+            device_map="auto",
         )
-
-        # Load the tokenizer with specified device and max_seq_length
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_name,
-            device_map=device,
-            max_seq_length=max_seq_length
-        )
-        
-        # Return the initialized model and tokenizer
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
         return model, tokenizer
 
-
     def generate_text(self, prompt, max_new_tokens=2048, temperature=0.0):
-        """Generate text using the instantiated tokenizer and model with specified settings"""
-    
-        # Encode the prompt and convert to PyTorch tensor
-        input_ids = self.tokenizer(prompt, return_tensors="pt", padding=True).to(self.device)
+        """Generate text using LLaMA"""
+        # Tokenize prompt and move to device
+        input_ids = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
-        # Determine if sampling should be performed based on temperature
-        do_sample = True if temperature > 0 else False
+        # Decide if sampling should be used
+        do_sample = temperature > 0
 
-        # Generate text based on the input prompt
-        outputs = self.model.generate(**input_ids, 
-                                      max_new_tokens=max_new_tokens, 
-                                      do_sample=do_sample, 
-                                      temperature=temperature
-                                     )
+        outputs = self.model.generate(
+            **input_ids,
+            max_new_tokens=max_new_tokens,
+            do_sample=do_sample,
+            temperature=temperature
+        )
 
-        # Decode the generated output into text
-        results = [self.tokenizer.decode(output) for output in outputs]
-
-        # Return the list of generated text results
+        # Decode all generated sequences
+        results = [self.tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
         return results
 
 
@@ -267,37 +259,9 @@ if __name__ == '__main__':
 
     # Initialize the name of the embeddings and model
     embeddings_name = "./gte-large"
-    model_name = "./gemma-2b-it"
+    model_name = "./Llama-3.2-1b-instruct"
 
     # Create an instance of AIAssistant with specified parameters
-    gemma_ai_assistant = AIAssistant(gemma_model=GemmaHF(model_name), embeddings_name=embeddings_name)
+    llama_model = LlamaHF(model_name)
 
-    if gemma_ai_assistant.load_embeddings():
-        print("AIAssistant::loaded_embeddings OK.")
-        gemma_ai_assistant.store_knowledge_base(extracted_texts)
-    else:
-        # Map the intended knowledge base to embeddings and index it
-        gemma_ai_assistant.learn_knowledge_base(extracted_texts)
-
-        # Save the embeddings to disk (for later use)
-        gemma_ai_assistant.save_embeddings()
-
-
-    # Set the temperature (creativity) of the AI assistant and set the role
-    gemma_ai_assistant.set_temperature(0.0)
-    gemma_ai_assistant.set_role("data science expert whose explanations are useful, clear and complete")
-
-
-    #######################################################################################################################
-    # Run and test
-    gemma_ai_assistant.query("What is the difference between data science, machine learning, and artificial intelligence?")
-
-    exit(0)
-
-    gemma_ai_assistant.query("Explain how linear regression works")
-
-    gemma_ai_assistant.query("What are decision trees, and how do they work in machine learning?")
-
-    gemma_ai_assistant.query("What is cross-validation, and why is it used in machine learning?")
-
-    gemma_ai_assistant.query("Explain the concept of regularization and its importance in preventing overfitting in machine learning models")
+    llama_model = None
