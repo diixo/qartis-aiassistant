@@ -13,7 +13,7 @@ from tqdm import tqdm
 #import scann
 import torch
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoTokenizer, AutoModelForCausalLM, LlamaForCausalLM, LlamaTokenizer
 from sentence_transformers import SentenceTransformer
 
 from transformers import BitsAndBytesConfig
@@ -48,10 +48,7 @@ def add_indefinite_article(role_name):
     return role_name
 
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
-
-class LlamaHF:
+class LlamaModel:
     """Wrapper for the Transformers implementation of LLaMA"""
 
     def __init__(self, model_name, max_seq_length=2048):
@@ -68,11 +65,11 @@ class LlamaHF:
 
     def initialize_model(self, model_name, device):
         """Initialize LLaMA model and tokenizer"""
-        model = AutoModelForCausalLM.from_pretrained(
+        model = LlamaForCausalLM.from_pretrained(
             model_name,
             device_map="auto",
         )
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        tokenizer = LlamaTokenizer.from_pretrained(model_name)
         return model, tokenizer
 
     def generate_text(self, prompt, max_new_tokens=2048, temperature=0.0):
@@ -259,9 +256,37 @@ if __name__ == '__main__':
 
     # Initialize the name of the embeddings and model
     embeddings_name = "./gte-large"
-    model_name = "./Llama-3.2-1b-instruct"
+    model_name = "./Llama-68m-chat-v1"
 
     # Create an instance of AIAssistant with specified parameters
-    llama_model = LlamaHF(model_name)
+    assistant = AIAssistant(gemma_model=LlamaModel(model_name), embeddings_name=embeddings_name)
 
-    llama_model = None
+    if assistant.load_embeddings():
+        print("AIAssistant::loaded_embeddings OK.")
+        assistant.store_knowledge_base(extracted_texts)
+    else:
+        # Map the intended knowledge base to embeddings and index it
+        assistant.learn_knowledge_base(extracted_texts)
+
+        # Save the embeddings to disk (for later use)
+        assistant.save_embeddings()
+
+
+    # Set the temperature (creativity) of the AI assistant and set the role
+    assistant.set_temperature(0.0)
+    assistant.set_role("data science expert whose explanations are useful, clear and complete")
+
+    exit(0)
+
+    #######################################################################################################################
+    # Run and test
+    assistant.query("What is the difference between data science, machine learning, and artificial intelligence?")
+
+    assistant.query("Explain how linear regression works")
+
+    assistant.query("What are decision trees, and how do they work in machine learning?")
+
+    assistant.query("What is cross-validation, and why is it used in machine learning?")
+
+    assistant.query("Explain the concept of regularization and its importance in preventing overfitting in machine learning models")
+
