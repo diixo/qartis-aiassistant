@@ -13,11 +13,12 @@
 
 * Local embeddings model: `gte-large` from https://huggingface.co/thenlper/gte-large
 
-Original source: https://github.com/diixo/qartis-aiassistant
+Original : https://github.com/diixo/qartis-aiassistant
 
 
 ```bash
 pip install -U transformers==4.45.0
+pip install sentencepiece
 ```
 
 
