@@ -270,34 +270,34 @@ if __name__ == '__main__':
     model_name = "./gemma-2b-it"
 
     # Create an instance of AIAssistant with specified parameters
-    gemma_ai_assistant = AIAssistant(gemma_model=GemmaHF(model_name), embeddings_name=embeddings_name)
+    assistant = AIAssistant(gemma_model=GemmaHF(model_name), embeddings_name=embeddings_name)
 
-    if gemma_ai_assistant.load_embeddings():
+    if assistant.load_embeddings():
         print("AIAssistant::loaded_embeddings OK.")
-        gemma_ai_assistant.store_knowledge_base(extracted_texts)
+        assistant.store_knowledge_base(extracted_texts)
     else:
         # Map the intended knowledge base to embeddings and index it
-        gemma_ai_assistant.learn_knowledge_base(extracted_texts)
+        assistant.learn_knowledge_base(extracted_texts)
 
         # Save the embeddings to disk (for later use)
-        gemma_ai_assistant.save_embeddings()
+        assistant.save_embeddings()
 
 
     # Set the temperature (creativity) of the AI assistant and set the role
-    gemma_ai_assistant.set_temperature(0.0)
-    gemma_ai_assistant.set_role("data science expert whose explanations are useful, clear and complete")
+    assistant.set_temperature(0.0)
+    assistant.set_role("data science expert whose explanations are useful, clear and complete")
 
 
     #######################################################################################################################
     # Run and test
-    gemma_ai_assistant.query("What is the difference between data science, machine learning, and artificial intelligence?")
+    assistant.query("What is the difference between data science, machine learning, and artificial intelligence?")
 
     exit(0)
 
-    gemma_ai_assistant.query("Explain how linear regression works")
+    assistant.query("Explain how linear regression works")
 
-    gemma_ai_assistant.query("What are decision trees, and how do they work in machine learning?")
+    assistant.query("What are decision trees, and how do they work in machine learning?")
 
-    gemma_ai_assistant.query("What is cross-validation, and why is it used in machine learning?")
+    assistant.query("What is cross-validation, and why is it used in machine learning?")
 
-    gemma_ai_assistant.query("Explain the concept of regularization and its importance in preventing overfitting in machine learning models")
+    assistant.query("Explain the concept of regularization and its importance in preventing overfitting in machine learning models")
