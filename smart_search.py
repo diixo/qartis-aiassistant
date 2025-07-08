@@ -47,9 +47,9 @@ class SmartSearch_FAISS:
         return self.add_texts_to_index([ text ])
 
 
-    def search_batched(self, query_text: str, k: int = 20):
+    def search_batched(self, query: str, k: int = 20):
         if self.model:
-            query_embedding = self.model.encode([query_text])
+            query_embedding = self.model.encode([query])
 
             distances, indices = self.index.search(query_embedding, k)
 
