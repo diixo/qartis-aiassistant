@@ -92,7 +92,7 @@ class LlamaModel:
         return results
 
 
-def generate_summary_and_answer(question, data, searcher, embedding_model, model,
+def generate_summary_and_answer(question, data, searcher, model,
                                 max_new_tokens=2048, temperature=0.4, role="expert"):
     """Generate an answer for a given question using context from a dataset"""
     
@@ -162,9 +162,7 @@ class AIAssistant():
         
         # Initialize Gemma model (it can be transformer-based or any other)
         self.gemma_model = gemma_model
-        
-        # Load the embedding model
-        self.embedding_model = SentenceTransformer(self.embeddings_name)
+
         
     def store_knowledge_base(self, knowledge_base):
         """Store the knowledge base"""
@@ -191,7 +189,6 @@ class AIAssistant():
         answer = generate_summary_and_answer(query, 
                                              self.knowledge_base, 
                                              self.searcher, 
-                                             self.embedding_model, 
                                              self.gemma_model,
                                              temperature=self.temperature,
                                              role=self.role)
@@ -275,8 +272,6 @@ if __name__ == '__main__':
     # Set the temperature (creativity) of the AI assistant and set the role
     assistant.set_temperature(0.0)
     assistant.set_role("data science expert whose explanations are useful, clear and complete")
-
-    exit(0)
 
     #######################################################################################################################
     # Run and test
