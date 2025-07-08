@@ -1,5 +1,5 @@
 
-# ai-assistant with gemma-2b-it
+# ai-assistant wrapper
 
 **QARTIS** - `Question Answering Retrieval Transformer Intelligent System`
 

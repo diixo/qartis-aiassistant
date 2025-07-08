@@ -6,4 +6,6 @@
 /gte-large/*
 /Llama-3.2-1b-Instruct/*
 
+/Llama-68m-chat-v1/*
+
 *.npy
