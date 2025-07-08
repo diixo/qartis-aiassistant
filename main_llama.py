@@ -28,7 +28,7 @@ def clean_text(txt, EOS_TOKEN):
     txt = (txt
            .replace(EOS_TOKEN, "") # Replace the end-of-sentence token with an empty string
            .replace("**", "")      # Replace double asterisks with an empty string
-           .replace("<pad>", "")   # Replace "<pad>" with an empty string
+           .replace("</s>", "")   # Replace "<pad>" with an empty string
            .replace("  ", " ")     # Replace double spaces with single spaces
           ).strip()                # Strip leading and trailing spaces from the text
     return txt
@@ -84,7 +84,10 @@ class LlamaModel:
             **input_ids,
             max_new_tokens=max_new_tokens,
             do_sample=do_sample,
-            temperature=temperature
+            temperature=0.8,
+            top_k=4,
+            top_p=0.95,
+            penalty_alpha=0.5,
         )
 
         # Decode all generated sequences
@@ -97,51 +100,59 @@ def generate_summary_and_answer(question, data, searcher, model,
     """Generate an answer for a given question using context from a dataset"""
     
     # Find similar contexts in the dataset based on the embedded question
-    neighbors, distances = searcher.search_batched(question)
+    neighbors, distances = searcher.search_batched(query=question, k=20)
     
     # Extract context from the dataset based on the indices of similar contexts
-    context = " ".join([data[pos] for pos in np.ravel(neighbors)])
+    context = " ".join([data[pos][:512] for pos in np.ravel(neighbors)])
     
     # Get the end-of-sentence token from the tokenizer
     try:
         EOS_TOKEN = model.tokenizer.eos_token
     except:
-        EOS_TOKEN = "<eos>"
+        EOS_TOKEN = "</s>"
     
     # Add a determinative adjective to the role
     role = add_indefinite_article(role)
-    
-    # Generate a prompt for summarizing the context
-    prompt = f"""
-             Summarize this context: "{context}" in order to answer the question "{question}" as {role}\
-             SUMMARY:
-             """.strip() + EOS_TOKEN
-    
-    # Generate a summary based on the prompt
-    results = model.generate_text(prompt, max_new_tokens, temperature)
-    
-    # Clean the generated summary
-    summary = clean_text(results[0].split("SUMMARY:")[-1], EOS_TOKEN)
 
-    # Generate a prompt for providing an answer
-    prompt = f"""
+    # Generate a prompt for summarizing the context
+    user_msg = f'Summarize this context: "{context}" in order to answer the question "{question}"'
+
+    prompt = f"""<|im_start|>system You are {role}<|im_end|>\n
+            <|im_start|>user {user_msg}<|im_end|>\n
+            <|im_start|>assistant SUMMARY:
+            """.strip()
+
+
+    # Generate a summary based on the prompt
+    results = model.generate_text(prompt, max_new_tokens, temperature)[0]
+    
+    # # Clean the generated summary
+    summary = clean_text(results.split("SUMMARY:")[-1], EOS_TOKEN)
+
+    # # Generate final answer: #########################################
+    user_msg = f"""
             Here is the context: {summary}
             Using the relevant information from the context 
             and integrating it with your knowledge,
-            provide an answer as {role} to the question: {question}.
+            provide an answer to the question: {question}.
             If the context doesn't provide
             any relevant information answer with 
             [I couldn't find a good match in my
             knowledge base for your question, 
-            hence I answer based on my own knowledge] \
-            ANSWER:
-            """.strip() + EOS_TOKEN
+            hence I answer based on my own knowledge]
+            """.strip()
+
+
+    prompt = f"""<|im_start|>system You are {role}<|im_end|>\n
+            <|im_start|>user {user_msg}<|im_end|>\n
+            <|im_start|>assistant ANSWER:
+            """.strip()
 
     # Generate an answer based on the prompt
-    results = model.generate_text(prompt, max_new_tokens, temperature)
+    results = model.generate_text(prompt, max_new_tokens, temperature)[0]
     
     # Clean the generated answer
-    answer = clean_text(results[0].split("ANSWER:")[-1], EOS_TOKEN)
+    answer = clean_text(results.split("ANSWER:")[-1], EOS_TOKEN)
 
     # Return the cleaned answer
     return answer
@@ -276,6 +287,8 @@ if __name__ == '__main__':
     #######################################################################################################################
     # Run and test
     assistant.query("What is the difference between data science, machine learning, and artificial intelligence?")
+
+    exit(0)
 
     assistant.query("Explain how linear regression works")
 
