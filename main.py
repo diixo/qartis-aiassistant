@@ -80,6 +80,10 @@ class GemmaHF():
         return model, tokenizer
 
 
+    def max_position_embeddings(self):
+        return self.model.config.max_position_embeddings
+
+
     def generate_text(self, prompt, max_new_tokens=2048, temperature=0.0):
         """Generate text using the instantiated tokenizer and model with specified settings"""
     
@@ -118,6 +122,8 @@ def generate_summary_and_answer(question, data, searcher, model,
         EOS_TOKEN = model.tokenizer.eos_token
     except:
         EOS_TOKEN = "<eos>"
+
+    #print("GemmaModel.max_position_embeddings:", model.max_position_embeddings())
     
     # Add a determinative adjective to the role
     role = add_indefinite_article(role)
@@ -130,9 +136,12 @@ def generate_summary_and_answer(question, data, searcher, model,
     
     # Generate a summary based on the prompt
     results = model.generate_text(prompt, max_new_tokens, temperature)
+    results = results[0]
     
+
     # Clean the generated summary
-    summary = clean_text(results[0].split("SUMMARY:")[-1], EOS_TOKEN)
+    #summary = clean_text(results[0].split("SUMMARY:")[-1], EOS_TOKEN)
+    summary = clean_text(results, EOS_TOKEN)
 
     # Generate a prompt for providing an answer
     prompt = f"""
