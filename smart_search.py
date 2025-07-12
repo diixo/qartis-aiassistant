@@ -7,7 +7,7 @@ from pathlib import Path
 
 class SmartSearch_FAISS:
 
-    def __init__(self, modelname="all-MiniLM-L6-v2") -> None:
+    def __init__(self, modelname="./gte-large") -> None:
         self.model = SentenceTransformer(modelname)
         self.index = None
 
