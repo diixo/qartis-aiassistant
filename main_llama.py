@@ -103,7 +103,7 @@ def generate_summary_and_answer(question, data, searcher, model,
     neighbors, distances = searcher.search_batched(query=question, k=20)
     
     # Extract context from the dataset based on the indices of similar contexts
-    context = " ".join([data[pos][:512] for pos in np.ravel(neighbors)])
+    context = " ".join([data[pos] for pos in np.ravel(neighbors)])
     
     # Get the end-of-sentence token from the tokenizer
     try:
@@ -264,7 +264,8 @@ if __name__ == '__main__':
 
     # Initialize the name of the embeddings and model
     embeddings_name = "./gte-large"
-    model_name = "./Llama-68m-chat-v1"
+    #model_name = "./Llama-68m-chat-v1"
+    model_name = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
     # Create an instance of AIAssistant with specified parameters
     assistant = AIAssistant(gemma_model=LlamaModel(model_name), embeddings_name=embeddings_name)
