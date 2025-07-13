@@ -123,25 +123,27 @@ def generate_summary_and_answer(question, data, searcher, model,
     except:
         EOS_TOKEN = "<eos>"
 
-    #print("GemmaModel.max_position_embeddings:", model.max_position_embeddings())
     
     # Add a determinative adjective to the role
     role = add_indefinite_article(role)
     
     # Generate a prompt for summarizing the context
     prompt = f"""
-             Summarize this context: "{context}" in order to answer the question "{question}" as {role}\
-             SUMMARY:
-             """.strip() + EOS_TOKEN
-    
-    # Generate a summary based on the prompt
-    results = model.generate_text(prompt, max_new_tokens, temperature)
-    results = results[0]
-    
+        <start_of_turn>system
+        You are {role}
+        <end_of_turn>
+        <start_of_turn>user
+        Summarize this: "{context}" in order by point as answer information on question "{question}"
+        <end_of_turn>
+        <start_of_turn>model
+        SUMMARY:
+        """.strip()
 
+    # Generate a summary based on the prompt
+    results = model.generate_text(prompt, model.max_position_embeddings(), temperature)[0]
+    
     # Clean the generated summary
-    #summary = clean_text(results[0].split("SUMMARY:")[-1], EOS_TOKEN)
-    summary = clean_text(results, EOS_TOKEN)
+    summary = clean_text(results.split("SUMMARY:")[-1], EOS_TOKEN)
 
     # Generate a prompt for providing an answer
     prompt = f"""
@@ -158,10 +160,10 @@ def generate_summary_and_answer(question, data, searcher, model,
             """.strip() + EOS_TOKEN
 
     # Generate an answer based on the prompt
-    results = model.generate_text(prompt, max_new_tokens, temperature)
+    results = model.generate_text(prompt, max_new_tokens, temperature)[0]
     
     # Clean the generated answer
-    answer = clean_text(results[0].split("ANSWER:")[-1], EOS_TOKEN)
+    answer = clean_text(results.split("ANSWER:")[-1], EOS_TOKEN)
 
     # Return the cleaned answer
     return answer
