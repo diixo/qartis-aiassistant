@@ -133,7 +133,7 @@ def generate_summary_and_answer(question, data, searcher, model,
         You are {role}
         <end_of_turn>
         <start_of_turn>user
-        Summarize this: "{context}" in order by point as answer information on question "{question}"
+        in order to answer the question: "{question}", summarize this: "{context}"
         <end_of_turn>
         <start_of_turn>model
         SUMMARY:
@@ -144,6 +144,8 @@ def generate_summary_and_answer(question, data, searcher, model,
     
     # Clean the generated summary
     summary = clean_text(results.split("SUMMARY:")[-1], EOS_TOKEN)
+
+    print("SUMMARY:", results, ">>>>>")
 
     # Generate a prompt for providing an answer
     prompt = f"""
